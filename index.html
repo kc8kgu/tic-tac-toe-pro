@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+    <h1>Tic Tac Toe</h1>
+
+    <div class="top-bar">
+        <div class="segmented mode-selector">
+            <button id="ai-mode" class="theme-btn active"><i class="fas fa-robot"></i> vs AI</button>
+            <button id="pvp-mode" class="theme-btn"><i class="fas fa-user-friends"></i> 2 Player</button>
+        </div>
+        <div class="segmented theme-selector">
+            <button id="light-theme" class="theme-btn"><i class="fas fa-sun"></i> Light</button>
+            <button id="dark-theme" class="theme-btn active"><i class="fas fa-moon"></i> Dark</button>
+        </div>
+    </div>
+
+    <div class="score-board">
+        <div class="player-score player-x active" id="x-score-box" data-player="X">
+            <span class="player-label"><i class="fas fa-xmark"></i> Player X</span>
+            <span class="score-value" id="x-score">0</span>
+        </div>
+        <div class="score-divider">VS</div>
+        <div class="player-score player-o" id="o-score-box" data-player="O">
+            <span class="player-label"><i class="far fa-circle"></i> Player O</span>
+            <span class="score-value" id="o-score">0</span>
+        </div>
+    </div>
+
+    <div class="board-container">
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+    </div>
+
+    <div id="status">Player X's turn</div>
+
+    <div class="game-controls">
+        <button id="reset" class="btn reset-btn"><i class="fas fa-redo"></i> Reset</button>
+        <button id="hint" class="btn hint-btn"><i class="fas fa-lightbulb"></i> Hint</button>
+        <button id="sound-toggle" class="btn sound-btn" aria-label="Toggle sound"><i class="fas fa-volume-up"></i></button>
+    </div>
+
+    <div id="win-modal" class="modal">
+        <div class="modal-content">
+            <div id="confetti" class="confetti"></div>
+            <h2 id="modal-title">Player X Wins!</h2>
+            <p id="modal-message">Congratulations on your victory!</p>
+            <button id="close-modal" class="btn modal-btn"><i class="fas fa-times"></i> Close</button>
+        </div>
+    </div>
+
+    <!-- Audio tags removed - handled by script.js -->
+
+    <script src="script.js"></script>
+</body>
+</html>

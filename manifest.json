@@ -1,0 +1,14 @@
+{
+  "name": "Tic Tac Toe Pro",
+  "short_name": "TicTacToe",
+  "description": "A tic tac toe game with an unbeatable AI, 2-player mode, and theming.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
