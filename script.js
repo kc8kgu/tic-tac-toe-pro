@@ -286,6 +286,11 @@ const MARKUP = {
   O: '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="stroke" cx="50" cy="50" r="35"/></svg>'
 };
 
+const SOUND_ICON_MARKUP = {
+  on: '<span class="sound-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 14h4l5 4V6L8 10H4Z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>',
+  off: '<span class="sound-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 14h4l5 4V6L8 10H4Z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11M16 8l6 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>'
+};
+
 class TicTacToeController {
   constructor() {
     const preferences = loadPreferences();
@@ -592,10 +597,9 @@ class TicTacToeController {
   }
 
   renderSoundToggle() {
-    const icon = this.elements.soundToggleBtn.querySelector('.sound-icon');
-    icon.className = this.state.soundEnabled
-      ? 'sound-icon fas fa-volume-up'
-      : 'sound-icon fas fa-volume-mute';
+    this.elements.soundToggleBtn.innerHTML = this.state.soundEnabled
+      ? SOUND_ICON_MARKUP.on
+      : SOUND_ICON_MARKUP.off;
     this.elements.soundToggleBtn.setAttribute(
       'aria-label',
       this.state.soundEnabled ? 'Turn sound off' : 'Turn sound on'
