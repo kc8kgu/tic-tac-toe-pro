@@ -16,7 +16,10 @@ class TicTacToe {
             currentPlayer: GAME_CONFIG.PLAYERS.X,
             gameBoard: ['', '', '', '', '', '', '', '', ''],
             gameActive: true,
-            scores: { [GAME_CONFIG.PLAYERS.X]: 0, [GAME_CONFIG.PLAYERS.O]: 0 },
+            scores: {
+                ai: { X: 0, AI: 0 },
+                pvp: { X: 0, Y: 0 }
+            },
             soundEnabled: true,
             isAiThinking: false,
             gameMode: 'ai'
@@ -31,6 +34,7 @@ class TicTacToe {
             cells: document.querySelectorAll('.cell'),
             statusDisplay: document.getElementById('status'),
             resetButton: document.getElementById('reset'),
+            resetScoresButton: document.getElementById('reset-scores'),
             hintButton:document.getElementById('hint'),
             xScoreElement: document.getElementById('x-score'),
             oScoreElement:document.getElementById('o-score'),
@@ -45,6 +49,8 @@ class TicTacToe {
             pvpModeBtn: document.getElementById('pvp-mode'),
             xScoreBox: document.getElementById('x-score-box'),
             oScoreBox: document.getElementById('o-score-box'),
+            xLabel: document.getElementById('x-label'),
+            oLabel: document.getElementById('o-label'),
             confetti: document.getElementById('confetti')
         };
 
@@ -53,6 +59,7 @@ class TicTacToe {
             this.state.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
         this.elements.aiModeBtn.classList.toggle('active', this.state.gameMode === 'ai');
         this.elements.pvpModeBtn.classList.toggle('active', this.state.gameMode === 'pvp');
+        this.updateModeLabels();
         this.init();
         this.setupEventListeners();
     }
@@ -80,7 +87,11 @@ class TicTacToe {
         this.state.gameMode = mode;
         if (scores) {
             try {
-                this.state.scores = JSON.parse(scores);
+                const parsed = JSON.parse(scores);
+                this.state.scores = {
+                    ai: { X: parsed.ai?.X || 0, AI: parsed.ai?.AI || 0 },
+                    pvp: { X: parsed.pvp?.X || 0, Y: parsed.pvp?.Y || 0 }
+                };
             } catch {
                 /* ignore malformed stored scores */
             }
@@ -102,6 +113,7 @@ class TicTacToe {
             }
         });
         this.elements.resetButton.addEventListener('click', () => this.resetGame());
+        this.elements.resetScoresButton.addEventListener('click', () => this.resetScores());
         this.elements.hintButton.addEventListener('click', () => this.showHint());
         this.elements.closeModalButton.addEventListener('click', () => this.closeModal());
         this.elements.lightThemeBtn.addEventListener('click', () => this.switchTheme('light'));
@@ -179,14 +191,16 @@ class TicTacToe {
             }
         }
         if (roundWon) {
+            const winnerPhrase = this.getWinnerPhrase(this.state.currentPlayer);
             this.playSynthSound('win');
-            this.elements.statusDisplay.textContent = `🎉 Player ${this.state.currentPlayer} wins!`;
+            this.elements.statusDisplay.textContent = `🎉 ${winnerPhrase} wins!`;
             this.state.gameActive = false;
             winningLine.forEach(index => this.elements.cells[index].classList.add('winner'));
-            this.state.scores[this.state.currentPlayer]++;
+            this.state.scores[this.state.gameMode][this.getScoreKey(this.state.currentPlayer)]++;
             this.updateScore();
             this.savePreferences();
-            this.showModal(`Player ${this.state.currentPlayer} Wins!`, `Congratulations on your victory!`, true);
+            const isAiWin = this.state.currentPlayer !== GAME_CONFIG.PLAYERS.X && this.state.gameMode === 'ai';
+            this.showModal(`${winnerPhrase} Wins!`, isAiWin ? '😢 Sorry for your loss!' : '😄 Congratulations on your victory!', true);
             return;
         }
         if (!this.state.gameBoard.includes('')) {
@@ -197,7 +211,7 @@ class TicTacToe {
             return;
         }
         this.state.currentPlayer = this.state.currentPlayer === GAME_CONFIG.PLAYERS.X ? GAME_CONFIG.PLAYERS.O : GAME_CONFIG.PLAYERS.X;
-        this.elements.statusDisplay.textContent = `Player ${this.state.currentPlayer}'s turn`;
+        this.elements.statusDisplay.textContent = `Player ${this.getPlayerLabel(this.state.currentPlayer)}'s turn`;
         this.updateActivePlayerUI();
         if (this.state.gameMode === 'ai' && this.state.currentPlayer === GAME_CONFIG.PLAYERS.O && this.state.gameActive) {
             this.state.isAiThinking = true;
@@ -275,6 +289,30 @@ class TicTacToe {
 
     resetGame() { this.init(); }
 
+    resetScores() {
+        this.state.scores = {
+            ai: { X: 0, AI: 0 },
+            pvp: { X: 0, Y: 0 }
+        };
+        this.updateScore();
+        this.savePreferences();
+    }
+
+    getScoreKey(player) {
+        if (player === GAME_CONFIG.PLAYERS.X) return 'X';
+        return this.state.gameMode === 'ai' ? 'AI' : 'Y';
+    }
+
+    getPlayerLabel(player) {
+        if (player === GAME_CONFIG.PLAYERS.X) return 'X';
+        return this.state.gameMode === 'ai' ? 'AI' : 'Y';
+    }
+
+    getWinnerPhrase(player) {
+        if (player !== GAME_CONFIG.PLAYERS.X && this.state.gameMode === 'ai') return 'AI Player';
+        return `Player ${this.getPlayerLabel(player)}`;
+    }
+
     showHint() {
         if (!this.state.gameActive || this.state.isAiThinking) return;
         const hintIndex = this.findBestMove(this.state.currentPlayer);
@@ -290,8 +328,15 @@ class TicTacToe {
     }
 
     updateScore() {
-        this.elements.xScoreElement.textContent = this.state.scores.X;
-        this.elements.oScoreElement.textContent = this.state.scores.O;
+        const bucket = this.state.scores[this.state.gameMode];
+        this.elements.xScoreElement.textContent = bucket.X;
+        this.elements.oScoreElement.textContent = bucket[this.getScoreKey(GAME_CONFIG.PLAYERS.O)];
+    }
+
+    updateModeLabels() {
+        const ai = this.state.gameMode === 'ai';
+        this.elements.xLabel.textContent = ai ? 'You' : 'Player X';
+        this.elements.oLabel.textContent = ai ? 'AI' : 'Player Y';
     }
 
     updateActivePlayerUI() {
@@ -337,6 +382,7 @@ class TicTacToe {
         this.state.gameMode = mode;
         this.elements.aiModeBtn.classList.toggle('active', mode === 'ai');
         this.elements.pvpModeBtn.classList.toggle('active', mode === 'pvp');
+        this.updateModeLabels();
         this.savePreferences();
         this.resetGame();
     }

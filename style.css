@@ -39,6 +39,10 @@ h1 {
     text-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
+button {
+    font-family: inherit;
+}
+
 /* Top Bar: mode + theme controls */
 .top-bar {
     display: flex;
@@ -72,8 +76,8 @@ h1 {
     color: white;
     cursor: pointer;
     transition: all 0.25s ease;
-    font-weight: 500;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 1rem;
     opacity: 0.6;
     display: flex;
     align-items: center;
@@ -96,21 +100,27 @@ h1 {
 .score-board {
     display: flex;
     align-items: center;
-    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-top: 22px;
+    width: 100%;
+    max-width: 360px;
 }
 
 .player-score {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 4px;
-    padding: 10px 22px;
+    gap: 6px;
+    padding: 8px 16px;
     border-radius: 14px;
     background: rgba(0, 0, 0, 0.2);
     border: 2px solid transparent;
     transition: all 0.3s ease;
-    min-width: 110px;
+    min-width: 0;
+    flex: 0 1 auto;
+    justify-content: center;
 }
 
 .player-score.active {
@@ -128,28 +138,32 @@ h1 {
 }
 
 .player-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
+    font-size: 1rem;
+    font-weight: 700;
     letter-spacing: 0.5px;
     opacity: 0.85;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
 }
 
 .player-x .player-label, .player-x .score-value { color: #60a5fa; }
 .player-o .player-label, .player-o .score-value { color: #f87171; }
 
 .score-value {
-    font-family: 'Courier New', monospace;
-    font-size: 1.8rem;
+    font-size: 1rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    display: inline-block;
+    min-width: 1.2em;
+    text-align: center;
 }
 
 .score-divider {
-    font-size: 0.85rem;
+    font-size: 1rem;
     font-weight: 700;
     opacity: 0.5;
     letter-spacing: 1px;
@@ -264,12 +278,12 @@ h1 {
 
 /* UI Elements */
 #status {
-    font-size: 1.5rem;
-    margin: 25px 0;
-    font-weight: 400;
+    font-size: 1rem;
+    margin: 10px 0;
+    font-weight: 700;
     text-shadow: 0 2px 5px rgba(0,0,0,0.2);
     text-align: center;
-    min-height: 30px;
+    min-height: 20px;
 }
 
 .game-controls {
@@ -282,8 +296,7 @@ h1 {
     padding: 12px 25px;
     font-size: 1rem;
     font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.3px;
     cursor: pointer;
     border: none;
     border-radius: 50px;
@@ -294,15 +307,19 @@ h1 {
     gap: 8px;
 }
 
-.reset-btn {
+.reset-btn, .reset-scores-btn {
     background: rgba(255, 255, 255, 0.12);
     color: white;
     box-shadow: none;
     border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
+.reset-scores-btn {
+    margin: 18px auto 0;
+}
+
 .hint-btn {
-    background: linear-gradient(45deg, #10b981, #059669);
+    background: #4ade80;
     color: white;
 }
 
@@ -320,7 +337,7 @@ h1 {
     box-shadow: 0 6px 20px rgba(0,0,0,0.4);
 }
 
-.reset-btn:hover, .sound-btn:hover {
+.reset-btn:hover, .reset-scores-btn:hover, .sound-btn:hover {
     background: rgba(255, 255, 255, 0.22);
     box-shadow: none;
 }
@@ -394,14 +411,16 @@ h1 {
 
 #modal-title {
     margin-top: 0;
-    font-size: 2rem;
+    font-size: 1rem;
+    font-weight: 700;
     color: white;
     text-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
 #modal-message {
     color: rgba(255, 255, 255, 0.9);
-    font-size: 1.2rem;
+    font-size: 1rem;
+    font-weight: 700;
     margin-bottom: 25px;
 }
 
@@ -418,7 +437,7 @@ h1 {
 
 /* 1. LIGHT THEME */
 body.theme-light {
-    background: #f0f2f5;
+    background: linear-gradient(135deg, #f3f9fc 0%, #b9dbef 100%);
     color: #333;
 }
 
@@ -443,7 +462,7 @@ body.theme-light .theme-btn {
 }
 
 body.theme-light .theme-btn.active {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.22);
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
     color: #1a1a2e;
 }
@@ -456,15 +475,42 @@ body.theme-light .score-divider {
     color: #333;
 }
 
-body.theme-light .reset-btn, body.theme-light .sound-btn {
+body.theme-light .sound-btn {
     background: rgba(0, 0, 0, 0.06);
     border-color: rgba(0, 0, 0, 0.15);
     color: #333;
 }
 
+body.theme-light .reset-btn, body.theme-light .reset-scores-btn {
+    background: rgba(0, 0, 0, 0.22);
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+    color: #1a1a2e;
+    font-weight: 700;
+}
+
 body.theme-light #status {
     text-shadow: none;
     color: #333;
+}
+
+body.theme-light .modal-content {
+    background: #ffffff;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+
+body.theme-light #modal-title {
+    color: #1a1a2e;
+    text-shadow: none;
+}
+
+body.theme-light #modal-message {
+    color: rgba(0, 0, 0, 0.7);
+}
+
+body.theme-light .modal-btn {
+    background: #1a1a2e;
+    color: #ffffff;
 }
 
 /* 2. DARK THEME */
@@ -486,20 +532,25 @@ body.theme-dark .cell {
 body.theme-dark .cell.x { color: #60a5fa; }
 body.theme-dark .cell.o { color: #f87171; }
 
-body.theme-dark .theme-btn {
-    background: rgba(255, 255, 255, 0.1);
-}
-
 /* Responsive Design */
 @media (max-width: 600px) {
     h1 { font-size: 1.8rem; }
     .board { grid-template-columns: repeat(3, 80px); grid-template-rows: repeat(3, 80px); }
     .cell { width: 80px; height: 80px; font-size: 2rem; }
-    .top-bar { flex-direction: column; align-items: center; }
-    .score-board { gap: 10px; }
-    .player-score { min-width: 90px; padding: 8px 14px; }
+    .top-bar { flex-direction: column; align-items: stretch; width: 90%; max-width: 360px; }
+    .segmented { width: 100%; justify-content: space-between; }
+    .theme-btn { flex: 1; justify-content: center; }
+    .score-board { gap: 8px; width: 90%; }
+    .player-score { padding: 8px 10px; }
+    .player-label { max-width: 80px; }
     .game-controls { flex-wrap: wrap; justify-content: center; }
     .modal-content { padding: 30px 20px; }
+}
+
+@media (max-width: 360px) {
+    .score-board { flex-direction: column; }
+    .player-score { width: 100%; }
+    .player-label { max-width: none; }
 }
 
 /* Shrink vertical spacing on short viewports (e.g. iPhone Safari/PWA) */
