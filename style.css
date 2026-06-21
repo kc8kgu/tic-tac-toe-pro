@@ -151,12 +151,18 @@ h1 {
     white-space: nowrap;
 }
 
+.theme-btn .fas,
+.btn .fas {
+    width: 1.25em;
+    flex: 0 0 auto;
+}
+
 .sound-icon {
-    min-width: auto;
-    min-height: auto;
+    min-width: 1.25em;
+    min-height: 1em;
     padding: 0;
     background: transparent;
-    font-size: 0.8rem;
+    font-size: 1rem;
 }
 
 .board-container {
@@ -234,18 +240,6 @@ h1 {
     color: var(--o-color);
 }
 
-.cell.x svg .stroke {
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: drawStroke 0.3s ease-out forwards;
-}
-
-.cell.o svg .stroke {
-    stroke-dasharray: 230;
-    stroke-dashoffset: 230;
-    animation: drawStroke 0.35s ease-out forwards;
-}
-
 .cell.winner {
     background: var(--success);
     color: #ffffff;
@@ -257,12 +251,6 @@ h1 {
 .cell.hinted {
     box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.3), 0 0 24px rgba(245, 158, 11, 0.48);
     transform: scale(1.04);
-}
-
-@keyframes drawStroke {
-    to {
-        stroke-dashoffset: 0;
-    }
 }
 
 @keyframes winnerPulse {

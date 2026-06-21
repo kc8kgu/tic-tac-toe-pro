@@ -1,18 +1,283 @@
-import {
-  GAME_MODES,
-  PLAYERS,
-  createInitialGameState,
-  getPlayerLabel,
-  getScoreKey,
-  getWinnerPhrase,
-  playMove,
-  resetGameState,
-  resetScoresState,
-  switchModeState
-} from './js/game.js';
-import { findBestMove } from './js/ai.js';
-import { loadPreferences, savePreferences } from './js/storage.js';
+// Game constants and state helpers
+const PLAYERS = {
+  X: 'X',
+  O: 'O'
+};
 
+const GAME_MODES = {
+  AI: 'ai',
+  PVP: 'pvp'
+};
+
+const EMPTY_BOARD = Object.freeze(['', '', '', '', '', '', '', '', '']);
+
+const WINNING_CONDITIONS = Object.freeze([
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6]
+]);
+
+function createInitialScores() {
+  return {
+    ai: { X: 0, AI: 0 },
+    pvp: { X: 0, O: 0 }
+  };
+}
+
+function createInitialGameState({
+  mode = GAME_MODES.AI,
+  soundEnabled = true,
+  scores = createInitialScores()
+} = {}) {
+  return {
+    currentPlayer: PLAYERS.X,
+    gameBoard: [...EMPTY_BOARD],
+    gameActive: true,
+    scores,
+    soundEnabled,
+    isAiThinking: false,
+    gameMode: mode,
+    lastResult: null
+  };
+}
+
+function evaluateBoard(board) {
+  for (const condition of WINNING_CONDITIONS) {
+    const [a, b, c] = condition;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return {
+        winner: board[a],
+        winningLine: condition,
+        isDraw: false
+      };
+    }
+  }
+
+  return {
+    winner: null,
+    winningLine: [],
+    isDraw: !board.includes('')
+  };
+}
+
+function getScoreKey(player, mode) {
+  if (player === PLAYERS.X) return 'X';
+  return mode === GAME_MODES.AI ? 'AI' : 'O';
+}
+
+function getPlayerLabel(player, mode) {
+  if (player === PLAYERS.X) return 'X';
+  return mode === GAME_MODES.AI ? 'AI' : 'O';
+}
+
+function getWinnerPhrase(player, mode) {
+  if (player === PLAYERS.O && mode === GAME_MODES.AI) return 'AI Player';
+  return `Player ${getPlayerLabel(player, mode)}`;
+}
+
+function nextPlayer(player) {
+  return player === PLAYERS.X ? PLAYERS.O : PLAYERS.X;
+}
+
+function playMove(state, index) {
+  if (
+    !state.gameActive ||
+    state.isAiThinking ||
+    index < 0 ||
+    index >= state.gameBoard.length ||
+    state.gameBoard[index] !== ''
+  ) {
+    return state;
+  }
+
+  const gameBoard = [...state.gameBoard];
+  gameBoard[index] = state.currentPlayer;
+
+  const evaluation = evaluateBoard(gameBoard);
+  const scores = cloneScores(state.scores);
+
+  if (evaluation.winner) {
+    scores[state.gameMode][getScoreKey(evaluation.winner, state.gameMode)] += 1;
+
+    return {
+      ...state,
+      gameBoard,
+      scores,
+      gameActive: false,
+      isAiThinking: false,
+      lastResult: evaluation
+    };
+  }
+
+  if (evaluation.isDraw) {
+    return {
+      ...state,
+      gameBoard,
+      gameActive: false,
+      isAiThinking: false,
+      lastResult: evaluation
+    };
+  }
+
+  return {
+    ...state,
+    gameBoard,
+    currentPlayer: nextPlayer(state.currentPlayer),
+    lastResult: null
+  };
+}
+
+function resetGameState(state) {
+  return {
+    ...createInitialGameState({
+      mode: state.gameMode,
+      soundEnabled: state.soundEnabled,
+      scores: cloneScores(state.scores)
+    })
+  };
+}
+
+function resetScoresState(state) {
+  return {
+    ...state,
+    scores: createInitialScores()
+  };
+}
+
+function switchModeState(state, mode) {
+  return resetGameState({
+    ...state,
+    gameMode: mode
+  });
+}
+
+function cloneScores(scores) {
+  return {
+    ai: { X: scores.ai?.X || 0, AI: scores.ai?.AI || 0 },
+    pvp: { X: scores.pvp?.X || 0, O: scores.pvp?.O || 0 }
+  };
+}
+
+// AI move selection
+function findBestMove(board, player) {
+  const isMaximizingPlayer = player === PLAYERS.O;
+  let bestScore = isMaximizingPlayer ? -Infinity : Infinity;
+  let move = null;
+
+  for (let index = 0; index < board.length; index += 1) {
+    if (board[index] !== '') continue;
+
+    const nextBoard = [...board];
+    nextBoard[index] = player;
+    const score = minimax(nextBoard, !isMaximizingPlayer);
+
+    if (isMaximizingPlayer ? score > bestScore : score < bestScore) {
+      bestScore = score;
+      move = index;
+    }
+  }
+
+  return move;
+}
+
+function minimax(board, isMaximizing) {
+  const result = evaluateBoard(board);
+
+  if (result.winner === PLAYERS.O) return 10;
+  if (result.winner === PLAYERS.X) return -10;
+  if (result.isDraw) return 0;
+
+  if (isMaximizing) {
+    let bestScore = -Infinity;
+
+    for (let index = 0; index < board.length; index += 1) {
+      if (board[index] !== '') continue;
+
+      const nextBoard = [...board];
+      nextBoard[index] = PLAYERS.O;
+      bestScore = Math.max(bestScore, minimax(nextBoard, false));
+    }
+
+    return bestScore;
+  }
+
+  let bestScore = Infinity;
+
+  for (let index = 0; index < board.length; index += 1) {
+    if (board[index] !== '') continue;
+
+    const nextBoard = [...board];
+    nextBoard[index] = PLAYERS.X;
+    bestScore = Math.min(bestScore, minimax(nextBoard, true));
+  }
+
+  return bestScore;
+}
+
+// Preference storage
+const STORAGE_KEYS = {
+  theme: 'ttt-theme',
+  sound: 'ttt-sound',
+  mode: 'ttt-mode',
+  scores: 'ttt-scores'
+};
+
+function loadPreferences(storage = window.localStorage) {
+  const theme = storage.getItem(STORAGE_KEYS.theme) || 'dark';
+  const sound = storage.getItem(STORAGE_KEYS.sound);
+  const mode = normalizeMode(storage.getItem(STORAGE_KEYS.mode));
+
+  return {
+    theme,
+    soundEnabled: sound === null ? true : sound === 'true',
+    mode,
+    scores: loadScores(storage.getItem(STORAGE_KEYS.scores))
+  };
+}
+
+function savePreferences(
+  storage = window.localStorage,
+  { theme, soundEnabled, mode, scores }
+) {
+  storage.setItem(STORAGE_KEYS.theme, theme);
+  storage.setItem(STORAGE_KEYS.sound, String(soundEnabled));
+  storage.setItem(STORAGE_KEYS.mode, normalizeMode(mode));
+  storage.setItem(STORAGE_KEYS.scores, JSON.stringify(scores));
+}
+
+function loadScores(value) {
+  const defaults = createInitialScores();
+
+  if (!value) return defaults;
+
+  try {
+    const parsed = JSON.parse(value);
+
+    return {
+      ai: {
+        X: parsed.ai?.X || 0,
+        AI: parsed.ai?.AI || 0
+      },
+      pvp: {
+        X: parsed.pvp?.X || 0,
+        O: parsed.pvp?.O ?? parsed.pvp?.Y ?? 0
+      }
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function normalizeMode(mode) {
+  return mode === GAME_MODES.PVP ? GAME_MODES.PVP : GAME_MODES.AI;
+}
+
+// UI/controller constants
 const AI_MOVE_DELAY_MS = 600;
 const HINT_DURATION_MS = 1000;
 
@@ -264,8 +529,13 @@ class TicTacToeController {
     this.elements.cells.forEach((cell, index) => {
       const player = this.state.gameBoard[index];
       const isPlayable = this.state.gameActive && !this.state.isAiThinking && player === '';
+      const renderedPlayer = cell.dataset.renderedPlayer || '';
 
-      cell.innerHTML = player ? MARKUP[player] : '';
+      if (renderedPlayer !== player) {
+        cell.innerHTML = player ? MARKUP[player] : '';
+        cell.dataset.renderedPlayer = player;
+      }
+
       cell.classList.toggle('x', player === PLAYERS.X);
       cell.classList.toggle('o', player === PLAYERS.O);
       cell.classList.toggle('winner', winningLine.includes(index));
@@ -323,7 +593,9 @@ class TicTacToeController {
 
   renderSoundToggle() {
     const icon = this.elements.soundToggleBtn.querySelector('.sound-icon');
-    icon.textContent = this.state.soundEnabled ? 'On' : 'Off';
+    icon.className = this.state.soundEnabled
+      ? 'sound-icon fas fa-volume-up'
+      : 'sound-icon fas fa-volume-mute';
     this.elements.soundToggleBtn.setAttribute(
       'aria-label',
       this.state.soundEnabled ? 'Turn sound off' : 'Turn sound on'

@@ -11,13 +11,10 @@ Thumbs.db
 
 # Claude Code
 .claude/
+.codex/
 
 # Logs
 *.log
-npm-debug.log*
-
-# Dependencies (if any tooling is added later)
-node_modules/
 
 # Local env files
 .env

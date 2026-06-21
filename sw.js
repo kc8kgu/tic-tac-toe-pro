@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tic-tac-toe-pro-v3';
+const CACHE_NAME = 'tic-tac-toe-pro-v6';
 const APP_SHELL = [
     './',
     './index.html',
