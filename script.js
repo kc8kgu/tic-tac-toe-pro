@@ -244,10 +244,14 @@ function savePreferences(
   storage = window.localStorage,
   { theme, soundEnabled, mode, scores }
 ) {
-  storage.setItem(STORAGE_KEYS.theme, theme);
-  storage.setItem(STORAGE_KEYS.sound, String(soundEnabled));
-  storage.setItem(STORAGE_KEYS.mode, normalizeMode(mode));
-  storage.setItem(STORAGE_KEYS.scores, JSON.stringify(scores));
+  try {
+    storage.setItem(STORAGE_KEYS.theme, theme);
+    storage.setItem(STORAGE_KEYS.sound, String(soundEnabled));
+    storage.setItem(STORAGE_KEYS.mode, normalizeMode(mode));
+    storage.setItem(STORAGE_KEYS.scores, JSON.stringify(scores));
+  } catch (error) {
+    console.warn('Unable to save preferences:', error);
+  }
 }
 
 function loadScores(value) {
@@ -286,14 +290,25 @@ const MARKUP = {
   O: '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="stroke" cx="50" cy="50" r="35"/></svg>'
 };
 
-const SOUND_ICON_MARKUP = {
-  on: '<span class="sound-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 14h4l5 4V6L8 10H4Z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>',
-  off: '<span class="sound-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 14h4l5 4V6L8 10H4Z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11M16 8l6 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>'
+const SOUND_ICONS = {
+  on: '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 9.5a4 4 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  off: '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 8l5 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M21 8l-5 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
 };
 
 class TicTacToeController {
   constructor() {
-    const preferences = loadPreferences();
+    let preferences;
+
+    try {
+      preferences = loadPreferences();
+    } catch {
+      preferences = {
+        theme: 'dark',
+        soundEnabled: true,
+        mode: GAME_MODES.AI,
+        scores: createInitialScores()
+      };
+    }
 
     this.state = createInitialGameState({
       mode: preferences.mode,
@@ -305,6 +320,7 @@ class TicTacToeController {
     this.aiMoveTimeoutId = null;
     this.hintTimeoutId = null;
     this.gameToken = 0;
+    this.lastFocusedElement = null;
 
     this.elements = {
       board: document.getElementById('board'),
@@ -351,9 +367,14 @@ class TicTacToeController {
       if (event.target === this.elements.winModal) this.closeModal();
     });
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && this.elements.winModal.classList.contains('active')) {
+      if (!this.elements.winModal.classList.contains('active')) return;
+
+      if (event.key === 'Escape') {
         this.closeModal();
+        return;
       }
+
+      this.trapModalFocus(event);
     });
 
     this.elements.lightThemeBtn.addEventListener('click', () => this.switchTheme('light'));
@@ -597,9 +618,8 @@ class TicTacToeController {
   }
 
   renderSoundToggle() {
-    this.elements.soundToggleBtn.innerHTML = this.state.soundEnabled
-      ? SOUND_ICON_MARKUP.on
-      : SOUND_ICON_MARKUP.off;
+    const icon = this.elements.soundToggleBtn.querySelector('.sound-icon');
+    icon.innerHTML = this.state.soundEnabled ? SOUND_ICONS.on : SOUND_ICONS.off;
     this.elements.soundToggleBtn.setAttribute(
       'aria-label',
       this.state.soundEnabled ? 'Turn sound off' : 'Turn sound on'
@@ -672,6 +692,9 @@ class TicTacToeController {
   }
 
   showModal(title, message, celebrate = false) {
+    this.lastFocusedElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     this.elements.modalTitle.textContent = title;
     this.elements.modalMessage.textContent = message;
     this.elements.confetti.innerHTML = '';
@@ -684,13 +707,53 @@ class TicTacToeController {
 
   closeModal() {
     this.elements.winModal.classList.remove('active');
+    if (this.lastFocusedElement) {
+      this.lastFocusedElement.focus();
+      this.lastFocusedElement = null;
+    }
+  }
+
+  trapModalFocus(event) {
+    if (event.key !== 'Tab') return;
+
+    const focusable = this.getModalFocusableElements();
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+
+    if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  getModalFocusableElements() {
+    return [...this.elements.winModal.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )];
   }
 }
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {
-      /* Service worker support is optional for gameplay. */
+    navigator.serviceWorker.register('sw.js').catch((error) => {
+      console.error('Service worker registration failed:', error);
+
+      if (document.querySelector('.sw-warning')) return;
+
+      const banner = document.createElement('p');
+      banner.className = 'sw-warning';
+      banner.setAttribute('role', 'status');
+      banner.textContent = 'Offline mode is unavailable right now.';
+      document.querySelector('.app-shell')?.prepend(banner);
     });
   });
 }

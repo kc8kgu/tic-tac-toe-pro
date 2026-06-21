@@ -8,7 +8,8 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a1a2e">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
     <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body class="theme-dark">
@@ -17,12 +18,12 @@
 
     <div class="top-bar" aria-label="Game settings">
         <div class="segmented mode-selector" role="group" aria-label="Game mode">
-            <button id="ai-mode" class="theme-btn active" type="button" aria-pressed="true"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><rect x="7" y="8" width="10" height="9" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="12" r="1.2" fill="currentColor"/><circle cx="14" cy="12" r="1.2" fill="currentColor"/><path d="M12 4v3M9 17v2M15 17v2M5 11h2M17 11h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span> vs AI</button>
-            <button id="pvp-mode" class="theme-btn" type="button" aria-pressed="false"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><circle cx="8" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 19c0-2.7 2-4.5 4.5-4.5S12.5 16.3 12.5 19M11.5 19c0-2.7 2-4.5 4.5-4.5s4.5 1.8 4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span> 2 Player</button>
+            <button id="ai-mode" class="theme-btn active" type="button" aria-pressed="true"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><rect x="6" y="7" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="11.5" r="1" fill="currentColor"/><circle cx="14" cy="11.5" r="1" fill="currentColor"/><path d="M9 14h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 7V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 18v2M16 18v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span> vs AI</button>
+            <button id="pvp-mode" class="theme-btn" type="button" aria-pressed="false"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><circle cx="8" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 19c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 19c.2-2 2.1-3.5 4.4-3.5S20 17 20 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span> 2 Player</button>
         </div>
         <div class="segmented theme-selector" role="group" aria-label="Theme">
-            <button id="light-theme" class="theme-btn" type="button" aria-pressed="false"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span> Light</button>
-            <button id="dark-theme" class="theme-btn active" type="button" aria-pressed="true"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M15.2 3.2A9 9 0 1 0 20.8 18 8 8 0 1 1 15.2 3.2Z" fill="currentColor"/></svg></span> Dark</button>
+            <button id="light-theme" class="theme-btn" type="button" aria-pressed="false"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.2 5.2l1.8 1.8M17 17l1.8 1.8M18.8 5.2L17 7M7 17l-1.8 1.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span> Light</button>
+            <button id="dark-theme" class="theme-btn active" type="button" aria-pressed="true"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M15.8 3.2a8.7 8.7 0 1 0 5 15.6 9.3 9.3 0 0 1-5.7-15.6 8.9 8.9 0 0 0 0 0h.7Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span> Dark</button>
         </div>
     </div>
 
@@ -43,9 +44,9 @@
     <p id="status" aria-live="polite">Player X's turn</p>
 
     <div class="game-controls" role="group" aria-label="Game controls">
-        <button id="reset" class="btn reset-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M20 12a8 8 0 1 1-2.3-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 4.5v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Reset Game</button>
-        <button id="hint" class="btn hint-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M9 18h6M10 21h4M8.5 14.5c-1.6-1.2-2.5-3-2.5-5a6 6 0 1 1 12 0c0 2-.9 3.8-2.5 5l-1 1.5h-5l-1-1.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Hint</button>
-        <button id="sound-toggle" class="btn sound-btn" type="button" aria-label="Toggle sound" aria-pressed="true"><span class="sound-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 14h4l5 4V6L8 10H4Z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></button>
+        <button id="reset" class="btn reset-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 11a8 8 0 1 0 2.3-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Reset Game</button>
+        <button id="hint" class="btn hint-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M9 18h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 21h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8.3 14.5A5 5 0 1 1 16 13c-.8.7-1.4 1.5-1.8 2.5h-4.4a6.5 6.5 0 0 0-1.5-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span> Hint</button>
+        <button id="sound-toggle" class="btn sound-btn" type="button" aria-label="Toggle sound" aria-pressed="true"><span class="sound-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 9.5a4 4 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></button>
     </div>
 
     <div class="score-board" aria-label="Scoreboard">
@@ -60,7 +61,7 @@
         </div>
     </div>
 
-    <button id="reset-scores" class="btn reset-scores-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M4 12a8 8 0 1 0 2.3-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 4.5v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Reset Scores</button>
+    <button id="reset-scores" class="btn reset-scores-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M20 13a8 8 0 1 1-2.3-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 6v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Reset Scores</button>
     </main>
 
     <div id="win-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message">
@@ -68,7 +69,7 @@
             <div id="confetti" class="confetti"></div>
             <h2 id="modal-title">Player X Wins!</h2>
             <p id="modal-message">Congratulations on your victory!</p>
-            <button id="close-modal" class="btn modal-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span> Close</button>
+            <button id="close-modal" class="btn modal-btn" type="button"><span class="btn-icon" aria-hidden="true"><svg class="icon-svg" viewBox="0 0 24 24" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span> Close</button>
         </div>
     </div>
 
