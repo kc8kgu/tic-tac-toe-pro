@@ -4,9 +4,12 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
+    padding: 10px 0;
+    box-sizing: border-box;
     /* This is the default theme (Original Purple) */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -94,7 +97,7 @@ h1 {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 22px;
+    margin-top: 22px;
 }
 
 .player-score {
@@ -246,7 +249,7 @@ h1 {
 .cell.winner {
     background: #4ade80 !important;
     color: white !important;
-    transform: scale(1.05) rotate(5deg);
+    transform: scale(1.05);
     box-shadow: 0 0 20px rgba(74, 222, 128, 0.8);
     animation: winnerPulse 1s infinite;
     position: relative;
@@ -254,9 +257,9 @@ h1 {
 }
 
 @keyframes winnerPulse {
-    0% { transform: scale(1.05) rotate(5deg); }
-    50% { transform: scale(1.1) rotate(5deg); }
-    100% { transform: scale(1.05) rotate(5deg); }
+    0% { transform: scale(1.05); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1.05); }
 }
 
 /* UI Elements */
@@ -407,6 +410,8 @@ h1 {
     color: #1a1a2e;
     padding: 10px 25px;
     font-weight: bold;
+    display: block;
+    margin: 0 auto;
 }
 
 /* --- THEME DEFINITIONS --- */
@@ -495,4 +500,24 @@ body.theme-dark .theme-btn {
     .player-score { min-width: 90px; padding: 8px 14px; }
     .game-controls { flex-wrap: wrap; justify-content: center; }
     .modal-content { padding: 30px 20px; }
+}
+
+/* Shrink vertical spacing on short viewports (e.g. iPhone Safari/PWA) */
+@media (max-height: 750px) {
+    h1 { font-size: 1.6rem; margin-bottom: 8px; }
+    .top-bar { margin-bottom: 10px; }
+    .score-board { margin-top: 10px; }
+    .board-container { padding: 12px; margin-bottom: 12px; }
+    .board { grid-template-columns: repeat(3, 78px); grid-template-rows: repeat(3, 78px); gap: 8px; }
+    .cell { width: 78px; height: 78px; font-size: 2rem; }
+    #status { margin: 10px 0; min-height: 24px; }
+    .game-controls { margin-top: 4px; }
+}
+
+@media (max-height: 650px) {
+    h1 { font-size: 1.4rem; margin-bottom: 6px; }
+    .player-score { padding: 6px 12px; min-width: 80px; }
+    .board { grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 6px; }
+    .cell { width: 64px; height: 64px; font-size: 1.6rem; }
+    .btn { padding: 9px 18px; font-size: 0.9rem; }
 }
