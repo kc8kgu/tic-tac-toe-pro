@@ -1,13 +1,11 @@
-const CACHE_NAME = 'tic-tac-toe-pro-v2';
+const CACHE_NAME = 'tic-tac-toe-pro-v3';
 const APP_SHELL = [
     './',
     './index.html',
     './style.css',
     './script.js',
     './manifest.json',
-    './icon.svg',
-    'https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+    './icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -25,11 +23,21 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    const requestUrl = new URL(event.request.url);
+    const isCacheableRequest =
+        event.request.method === 'GET' &&
+        requestUrl.origin === self.location.origin;
+
+    if (!isCacheableRequest) return;
+
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                const responseClone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+                if (response.ok) {
+                    const responseClone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+                }
+
                 return response;
             })
             .catch(() => caches.match(event.request))

@@ -1,395 +1,422 @@
-const GAME_CONFIG = {
-    PLAYERS: {
-        X: 'X',
-        O: 'O'
-    },
-    WINNING_CONDITIONS: [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-        [0, 4, 8], [2, 4, 6]             // diagonals
-    ]
+import {
+  GAME_MODES,
+  PLAYERS,
+  createInitialGameState,
+  getPlayerLabel,
+  getScoreKey,
+  getWinnerPhrase,
+  playMove,
+  resetGameState,
+  resetScoresState,
+  switchModeState
+} from './js/game.js';
+import { findBestMove } from './js/ai.js';
+import { loadPreferences, savePreferences } from './js/storage.js';
+
+const AI_MOVE_DELAY_MS = 600;
+const HINT_DURATION_MS = 1000;
+
+const MARKUP = {
+  X: '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><line class="stroke" x1="20" y1="20" x2="80" y2="80"/><line class="stroke" x1="80" y1="20" x2="20" y2="80"/></svg>',
+  O: '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="stroke" cx="50" cy="50" r="35"/></svg>'
 };
 
-class TicTacToe {
-    constructor() {
-        this.state = {
-            currentPlayer: GAME_CONFIG.PLAYERS.X,
-            gameBoard: ['', '', '', '', '', '', '', '', ''],
-            gameActive: true,
-            scores: {
-                ai: { X: 0, AI: 0 },
-                pvp: { X: 0, Y: 0 }
-            },
-            soundEnabled: true,
-            isAiThinking: false,
-            gameMode: 'ai'
-        };
+class TicTacToeController {
+  constructor() {
+    const preferences = loadPreferences();
 
-        this.winningConditions = GAME_CONFIG.WINNING_CONDITIONS;
-        this.audioCtx = null;
-        this.loadPreferences();
+    this.state = createInitialGameState({
+      mode: preferences.mode,
+      soundEnabled: preferences.soundEnabled,
+      scores: preferences.scores
+    });
+    this.currentTheme = preferences.theme;
+    this.audioCtx = null;
+    this.aiMoveTimeoutId = null;
+    this.hintTimeoutId = null;
+    this.gameToken = 0;
 
-        this.elements = {
-            board: document.getElementById('board'),
-            cells: document.querySelectorAll('.cell'),
-            statusDisplay: document.getElementById('status'),
-            resetButton: document.getElementById('reset'),
-            resetScoresButton: document.getElementById('reset-scores'),
-            hintButton:document.getElementById('hint'),
-            xScoreElement: document.getElementById('x-score'),
-            oScoreElement:document.getElementById('o-score'),
-            winModal: document.getElementById('win-modal'),
-            modalTitle: document.getElementById('modal-title'),
-            modalMessage: document.getElementById('modal-message'),
-            closeModalButton: document.getElementById('close-modal'),
-            lightThemeBtn: document.getElementById('light-theme'),
-            darkThemeBtn: document.getElementById('dark-theme'),
-            soundToggleBtn: document.getElementById('sound-toggle'),
-            aiModeBtn: document.getElementById('ai-mode'),
-            pvpModeBtn: document.getElementById('pvp-mode'),
-            xScoreBox: document.getElementById('x-score-box'),
-            oScoreBox: document.getElementById('o-score-box'),
-            xLabel: document.getElementById('x-label'),
-            oLabel: document.getElementById('o-label'),
-            confetti: document.getElementById('confetti')
-        };
+    this.elements = {
+      board: document.getElementById('board'),
+      cells: [...document.querySelectorAll('.cell')],
+      statusDisplay: document.getElementById('status'),
+      resetButton: document.getElementById('reset'),
+      resetScoresButton: document.getElementById('reset-scores'),
+      hintButton: document.getElementById('hint'),
+      xScoreElement: document.getElementById('x-score'),
+      oScoreElement: document.getElementById('o-score'),
+      winModal: document.getElementById('win-modal'),
+      modalTitle: document.getElementById('modal-title'),
+      modalMessage: document.getElementById('modal-message'),
+      closeModalButton: document.getElementById('close-modal'),
+      lightThemeBtn: document.getElementById('light-theme'),
+      darkThemeBtn: document.getElementById('dark-theme'),
+      soundToggleBtn: document.getElementById('sound-toggle'),
+      aiModeBtn: document.getElementById('ai-mode'),
+      pvpModeBtn: document.getElementById('pvp-mode'),
+      xScoreBox: document.getElementById('x-score-box'),
+      oScoreBox: document.getElementById('o-score-box'),
+      xLabel: document.getElementById('x-label'),
+      oLabel: document.getElementById('o-label'),
+      confetti: document.getElementById('confetti')
+    };
 
-        this.switchTheme(this.pendingTheme);
-        this.elements.soundToggleBtn.querySelector('i').className =
-            this.state.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-        this.elements.aiModeBtn.classList.toggle('active', this.state.gameMode === 'ai');
-        this.elements.pvpModeBtn.classList.toggle('active', this.state.gameMode === 'pvp');
-        this.updateModeLabels();
-        this.init();
-        this.setupEventListeners();
+    this.applyTheme(this.currentTheme);
+    this.setupEventListeners();
+    this.render();
+  }
+
+  setupEventListeners() {
+    this.elements.board.addEventListener('click', (event) => {
+      const cell = event.target.closest('.cell');
+      if (!cell) return;
+      this.handleCellSelection(Number(cell.dataset.index));
+    });
+
+    this.elements.resetButton.addEventListener('click', () => this.resetGame());
+    this.elements.resetScoresButton.addEventListener('click', () => this.resetScores());
+    this.elements.hintButton.addEventListener('click', () => this.showHint());
+    this.elements.closeModalButton.addEventListener('click', () => this.closeModal());
+    this.elements.winModal.addEventListener('click', (event) => {
+      if (event.target === this.elements.winModal) this.closeModal();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && this.elements.winModal.classList.contains('active')) {
+        this.closeModal();
+      }
+    });
+
+    this.elements.lightThemeBtn.addEventListener('click', () => this.switchTheme('light'));
+    this.elements.darkThemeBtn.addEventListener('click', () => this.switchTheme('dark'));
+    this.elements.soundToggleBtn.addEventListener('click', () => this.toggleSound());
+    this.elements.aiModeBtn.addEventListener('click', () => this.switchMode(GAME_MODES.AI));
+    this.elements.pvpModeBtn.addEventListener('click', () => this.switchMode(GAME_MODES.PVP));
+  }
+
+  handleCellSelection(index) {
+    if (this.state.isAiThinking || !this.state.gameActive) return;
+    this.playAt(index);
+  }
+
+  playAt(index) {
+    const previousState = this.state;
+    const nextState = playMove(this.state, index);
+
+    if (nextState === previousState) return;
+
+    this.state = nextState;
+    this.playSynthSound('move');
+    this.render();
+    this.handleRoundResult(previousState);
+    this.persistPreferences();
+    this.scheduleAiMove();
+  }
+
+  handleRoundResult(previousState) {
+    if (previousState.lastResult === this.state.lastResult || this.state.gameActive) return;
+
+    const result = this.state.lastResult;
+
+    if (result.winner) {
+      const winnerPhrase = getWinnerPhrase(result.winner, this.state.gameMode);
+      const isAiWin = result.winner === PLAYERS.O && this.state.gameMode === GAME_MODES.AI;
+
+      this.playSynthSound('win');
+      this.showModal(
+        `${winnerPhrase} Wins!`,
+        isAiWin ? 'Sorry for your loss!' : 'Congratulations on your victory!',
+        true
+      );
+      return;
     }
 
-    init() {
-        this.state.currentPlayer = GAME_CONFIG.PLAYERS.X;
-        this.state.gameBoard = ['', '', '', '', '', '', '', '', ''];
-        this.state.gameActive = true;
-        this.state.isAiThinking = false;
-        this.elements.statusDisplay.textContent = `Player ${this.state.currentPlayer}'s turn`;
-        this.elements.cells.forEach(cell => {
-            cell.innerHTML = '';
-            cell.classList.remove('x', 'o', 'winner');
-        });
-        this.updateActivePlayerUI();
-        this.updateScore();
+    if (result.isDraw) {
+      this.playSynthSound('draw');
+      this.showModal("It's a Draw!", 'No one wins this round!');
+    }
+  }
+
+  scheduleAiMove() {
+    this.clearPendingAiMove();
+
+    if (
+      this.state.gameMode !== GAME_MODES.AI ||
+      this.state.currentPlayer !== PLAYERS.O ||
+      !this.state.gameActive
+    ) {
+      return;
     }
 
-    loadPreferences() {
-        const theme = localStorage.getItem('ttt-theme') || 'dark';
-        const sound = localStorage.getItem('ttt-sound');
-        const mode = localStorage.getItem('ttt-mode') || 'ai';
-        const scores = localStorage.getItem('ttt-scores');
-        this.state.soundEnabled = sound === null ? true : sound === 'true';
-        this.state.gameMode = mode;
-        if (scores) {
-            try {
-                const parsed = JSON.parse(scores);
-                this.state.scores = {
-                    ai: { X: parsed.ai?.X || 0, AI: parsed.ai?.AI || 0 },
-                    pvp: { X: parsed.pvp?.X || 0, Y: parsed.pvp?.Y || 0 }
-                };
-            } catch {
-                /* ignore malformed stored scores */
-            }
-        }
-        this.pendingTheme = theme;
+    this.state = {
+      ...this.state,
+      isAiThinking: true
+    };
+    this.render();
+
+    const moveToken = this.gameToken;
+    this.aiMoveTimeoutId = window.setTimeout(() => {
+      this.aiMoveTimeoutId = null;
+      if (moveToken !== this.gameToken) return;
+
+      const bestMove = findBestMove(this.state.gameBoard, PLAYERS.O);
+      this.state = {
+        ...this.state,
+        isAiThinking: false
+      };
+
+      if (bestMove === null) {
+        this.render();
+        return;
+      }
+
+      this.playAt(bestMove);
+    }, AI_MOVE_DELAY_MS);
+  }
+
+  resetGame() {
+    this.clearPendingAiMove();
+    this.clearHint();
+    this.gameToken += 1;
+    this.state = resetGameState(this.state);
+    this.closeModal();
+    this.render();
+    this.persistPreferences();
+  }
+
+  resetScores() {
+    this.state = resetScoresState(this.state);
+    this.render();
+    this.persistPreferences();
+  }
+
+  switchMode(mode) {
+    if (mode === this.state.gameMode) return;
+    this.clearPendingAiMove();
+    this.clearHint();
+    this.gameToken += 1;
+    this.state = switchModeState(this.state, mode);
+    this.closeModal();
+    this.render();
+    this.persistPreferences();
+  }
+
+  switchTheme(theme) {
+    this.currentTheme = theme;
+    this.applyTheme(theme);
+    this.renderThemeControls();
+    this.persistPreferences();
+  }
+
+  applyTheme(theme) {
+    document.body.classList.remove('theme-light', 'theme-dark');
+    document.body.classList.add(`theme-${theme}`);
+  }
+
+  toggleSound() {
+    this.state = {
+      ...this.state,
+      soundEnabled: !this.state.soundEnabled
+    };
+    this.renderSoundToggle();
+    this.persistPreferences();
+  }
+
+  showHint() {
+    if (!this.state.gameActive || this.state.isAiThinking) return;
+
+    const hintIndex = findBestMove(this.state.gameBoard, this.state.currentPlayer);
+    if (hintIndex === null) return;
+
+    this.clearHint();
+    this.elements.cells[hintIndex].classList.add('hinted');
+    this.hintTimeoutId = window.setTimeout(() => this.clearHint(), HINT_DURATION_MS);
+  }
+
+  clearHint() {
+    if (this.hintTimeoutId !== null) {
+      window.clearTimeout(this.hintTimeoutId);
+      this.hintTimeoutId = null;
     }
 
-    savePreferences() {
-        localStorage.setItem('ttt-theme', document.body.className.replace('theme-', ''));
-        localStorage.setItem('ttt-sound', String(this.state.soundEnabled));
-        localStorage.setItem('ttt-mode', this.state.gameMode);
-        localStorage.setItem('ttt-scores', JSON.stringify(this.state.scores));
+    this.elements.cells.forEach((cell) => cell.classList.remove('hinted'));
+  }
+
+  clearPendingAiMove() {
+    if (this.aiMoveTimeoutId !== null) {
+      window.clearTimeout(this.aiMoveTimeoutId);
+      this.aiMoveTimeoutId = null;
+    }
+  }
+
+  render() {
+    this.renderCells();
+    this.renderStatus();
+    this.renderScores();
+    this.renderModeControls();
+    this.renderThemeControls();
+    this.renderSoundToggle();
+    this.renderActivePlayer();
+  }
+
+  renderCells() {
+    const winningLine = this.state.lastResult?.winningLine || [];
+
+    this.elements.cells.forEach((cell, index) => {
+      const player = this.state.gameBoard[index];
+      const isPlayable = this.state.gameActive && !this.state.isAiThinking && player === '';
+
+      cell.innerHTML = player ? MARKUP[player] : '';
+      cell.classList.toggle('x', player === PLAYERS.X);
+      cell.classList.toggle('o', player === PLAYERS.O);
+      cell.classList.toggle('winner', winningLine.includes(index));
+      cell.disabled = !isPlayable;
+      cell.setAttribute('aria-label', this.getCellLabel(index, player));
+    });
+  }
+
+  renderStatus() {
+    if (this.state.lastResult?.winner) {
+      this.elements.statusDisplay.textContent = `${getWinnerPhrase(
+        this.state.lastResult.winner,
+        this.state.gameMode
+      )} wins!`;
+      return;
     }
 
-    setupEventListeners() {
-        this.elements.board.addEventListener('click', (e) => {
-            if (e.target.classList.contains('cell')) {
-                this.handleCellClick(e);
-            }
-        });
-        this.elements.resetButton.addEventListener('click', () => this.resetGame());
-        this.elements.resetScoresButton.addEventListener('click', () => this.resetScores());
-        this.elements.hintButton.addEventListener('click', () => this.showHint());
-        this.elements.closeModalButton.addEventListener('click', () => this.closeModal());
-        this.elements.lightThemeBtn.addEventListener('click', () => this.switchTheme('light'));
-        this.elements.darkThemeBtn.addEventListener('click', () => this.switchTheme('dark'));
-        this.elements.soundToggleBtn.addEventListener('click', () => {
-            this.state.soundEnabled = !this.state.soundEnabled;
-            const icon = this.elements.soundToggleBtn.querySelector('i');
-            icon.className = this.state.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-            this.savePreferences();
-        });
-        this.elements.aiModeBtn.addEventListener('click', () => this.switchMode('ai'));
-        this.elements.pvpModeBtn.addEventListener('click', () => this.switchMode('pvp'));
+    if (this.state.lastResult?.isDraw) {
+      this.elements.statusDisplay.textContent = "It's a draw!";
+      return;
     }
 
-    playSynthSound(type) {
-        if (!this.state.soundEnabled) return;
-        if (!this.audioCtx) {
-            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        const audioCtx = this.audioCtx;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        if (type === 'move') {
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        } else if (type === 'win') {
-            oscillator.type = 'triangle';
-            oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-        } else if (type === 'draw') {
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        }
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.5);
+    if (this.state.isAiThinking) {
+      this.elements.statusDisplay.textContent = 'AI is thinking...';
+      return;
     }
 
-    handleCellClick(e) {
-        const clickedCell = e.target;
-        const clickedCellIndex = parseInt(clickedCell.dataset.index);
-        if (this.state.gameBoard[clickedCellIndex] !== '' || !this.state.gameActive || this.state.isAiThinking) return;
-        this.playSynthSound('move');
-        this.updateCell(clickedCell, clickedCellIndex);
-        this.checkResult();
+    this.elements.statusDisplay.textContent = `Player ${getPlayerLabel(
+      this.state.currentPlayer,
+      this.state.gameMode
+    )}'s turn`;
+  }
+
+  renderScores() {
+    const bucket = this.state.scores[this.state.gameMode];
+    this.elements.xScoreElement.textContent = bucket.X;
+    this.elements.oScoreElement.textContent = bucket[getScoreKey(PLAYERS.O, this.state.gameMode)];
+    this.elements.xLabel.textContent = this.state.gameMode === GAME_MODES.AI ? 'You' : 'Player X';
+    this.elements.oLabel.textContent = this.state.gameMode === GAME_MODES.AI ? 'AI' : 'Player O';
+  }
+
+  renderModeControls() {
+    this.elements.aiModeBtn.classList.toggle('active', this.state.gameMode === GAME_MODES.AI);
+    this.elements.pvpModeBtn.classList.toggle('active', this.state.gameMode === GAME_MODES.PVP);
+    this.elements.aiModeBtn.setAttribute('aria-pressed', String(this.state.gameMode === GAME_MODES.AI));
+    this.elements.pvpModeBtn.setAttribute('aria-pressed', String(this.state.gameMode === GAME_MODES.PVP));
+  }
+
+  renderThemeControls() {
+    this.elements.lightThemeBtn.classList.toggle('active', this.currentTheme === 'light');
+    this.elements.darkThemeBtn.classList.toggle('active', this.currentTheme === 'dark');
+    this.elements.lightThemeBtn.setAttribute('aria-pressed', String(this.currentTheme === 'light'));
+    this.elements.darkThemeBtn.setAttribute('aria-pressed', String(this.currentTheme === 'dark'));
+  }
+
+  renderSoundToggle() {
+    const icon = this.elements.soundToggleBtn.querySelector('.sound-icon');
+    icon.textContent = this.state.soundEnabled ? 'On' : 'Off';
+    this.elements.soundToggleBtn.setAttribute(
+      'aria-label',
+      this.state.soundEnabled ? 'Turn sound off' : 'Turn sound on'
+    );
+    this.elements.soundToggleBtn.setAttribute('aria-pressed', String(this.state.soundEnabled));
+  }
+
+  renderActivePlayer() {
+    this.elements.xScoreBox.classList.toggle('active', this.state.currentPlayer === PLAYERS.X);
+    this.elements.oScoreBox.classList.toggle('active', this.state.currentPlayer === PLAYERS.O);
+  }
+
+  getCellLabel(index, player) {
+    if (player) return `Cell ${index + 1}, ${player}`;
+    return `Cell ${index + 1}, empty`;
+  }
+
+  persistPreferences() {
+    savePreferences(window.localStorage, {
+      theme: this.currentTheme,
+      soundEnabled: this.state.soundEnabled,
+      mode: this.state.gameMode,
+      scores: this.state.scores
+    });
+  }
+
+  playSynthSound(type) {
+    if (!this.state.soundEnabled) return;
+
+    if (!this.audioCtx) {
+      this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
-    updateCell(cell, index) {
-        this.state.gameBoard[index] = this.state.currentPlayer;
-        cell.innerHTML = this.state.currentPlayer === GAME_CONFIG.PLAYERS.X
-            ? '<svg viewBox="0 0 100 100"><line class="stroke" x1="20" y1="20" x2="80" y2="80"/><line class="stroke" x1="80" y1="20" x2="20" y2="80"/></svg>'
-            : '<svg viewBox="0 0 100 100"><circle class="stroke" cx="50" cy="50" r="35"/></svg>';
-        cell.classList.add(this.state.currentPlayer.toLowerCase());
+    const audioCtx = this.audioCtx;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    const sound = {
+      move: { wave: 'sine', start: 440, end: 440, duration: 0.1 },
+      win: { wave: 'triangle', start: 523.25, end: 880, duration: 0.5 },
+      draw: { wave: 'sawtooth', start: 220, end: 220, duration: 0.4 }
+    }[type];
+
+    oscillator.type = sound.wave;
+    oscillator.frequency.setValueAtTime(sound.start, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(sound.end, audioCtx.currentTime + sound.duration);
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + sound.duration);
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + sound.duration);
+  }
+
+  launchConfetti() {
+    const colors = ['#60a5fa', '#f87171', '#fbbf24', '#4ade80'];
+    const container = this.elements.confetti;
+    container.innerHTML = '';
+
+    for (let index = 0; index < 30; index += 1) {
+      const piece = document.createElement('span');
+      piece.className = 'piece';
+      piece.style.left = `${Math.random() * 100}%`;
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDelay = `${Math.random() * 0.3}s`;
+      container.appendChild(piece);
     }
+  }
 
-    checkResult() {
-        let roundWon = false;
-        let winningLine = [];
-        for (const condition of this.winningConditions) {
-            const [a, b, c] = condition;
-            if (this.state.gameBoard[a] && 
-                this.state.gameBoard[a] === this.state.gameBoard[b] && 
-                this.state.gameBoard[a] === this.state.gameBoard[c]) {
-                roundWon = true;
-                winningLine = condition;
-                break;
-            }
-        }
-        if (roundWon) {
-            const winnerPhrase = this.getWinnerPhrase(this.state.currentPlayer);
-            this.playSynthSound('win');
-            this.elements.statusDisplay.textContent = `🎉 ${winnerPhrase} wins!`;
-            this.state.gameActive = false;
-            winningLine.forEach(index => this.elements.cells[index].classList.add('winner'));
-            this.state.scores[this.state.gameMode][this.getScoreKey(this.state.currentPlayer)]++;
-            this.updateScore();
-            this.savePreferences();
-            const isAiWin = this.state.currentPlayer !== GAME_CONFIG.PLAYERS.X && this.state.gameMode === 'ai';
-            this.showModal(`${winnerPhrase} Wins!`, isAiWin ? '😢 Sorry for your loss!' : '😄 Congratulations on your victory!', true);
-            return;
-        }
-        if (!this.state.gameBoard.includes('')) {
-            this.playSynthSound('draw');
-            this.elements.statusDisplay.textContent = "🤝 It's a draw!";
-            this.state.gameActive = false;
-            this.showModal("It's a Draw!", "No one wins this round!");
-            return;
-        }
-        this.state.currentPlayer = this.state.currentPlayer === GAME_CONFIG.PLAYERS.X ? GAME_CONFIG.PLAYERS.O : GAME_CONFIG.PLAYERS.X;
-        this.elements.statusDisplay.textContent = `Player ${this.getPlayerLabel(this.state.currentPlayer)}'s turn`;
-        this.updateActivePlayerUI();
-        if (this.state.gameMode === 'ai' && this.state.currentPlayer === GAME_CONFIG.PLAYERS.O && this.state.gameActive) {
-            this.state.isAiThinking = true;
-            setTimeout(() => this.makeAiMove(), 600);
-        }
-    }
+  showModal(title, message, celebrate = false) {
+    this.elements.modalTitle.textContent = title;
+    this.elements.modalMessage.textContent = message;
+    this.elements.confetti.innerHTML = '';
 
-    makeAiMove() {
-        this.state.isAiThinking = false;
-        const bestMove = this.findBestMove(GAME_CONFIG.PLAYERS.O);
-        if (bestMove !== null) {
-            const cell = this.elements.cells[bestMove];
-            this.handleCellClick({ target: cell });
-        }
-    }
+    if (celebrate) this.launchConfetti();
 
-    findBestMove(player) {
-        const isO = player === GAME_CONFIG.PLAYERS.O;
-        let bestScore = isO ? -Infinity : Infinity;
-        let move = null;
-        for (let i = 0; i < 9; i++) {
-            if (this.state.gameBoard[i] === '') {
-                this.state.gameBoard[i] = player;
-                let score = this.minimax(this.state.gameBoard, 0, !isO);
-                this.state.gameBoard[i] = '';
-                if (isO ? score > bestScore : score < bestScore) {
-                    bestScore = score;
-                    move = i;
-                }
-            }
-        }
-        return move;
-    }
+    this.elements.winModal.classList.add('active');
+    this.elements.closeModalButton.focus();
+  }
 
-    minimax(board, depth, isMaximizing) {
-        const winner = this.checkWinnerForMinimax(board);
-        if (winner !== null) {
-            return winner === GAME_CONFIG.PLAYERS.O ? 10 : winner === GAME_CONFIG.PLAYERS.X ? -10 : 0;
-        }
-        if (isMaximizing) {
-            let bestScore = -Infinity;
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') {
-                    board[i] = GAME_CONFIG.PLAYERS.O;
-                    let score = this.minimax(board, depth + 1, false);
-                    board[i] = '';
-                    bestScore = Math.max(score, bestScore);
-                }
-            }
-            return bestScore;
-        } else {
-            let bestScore = Infinity;
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') {
-                    board[i] = GAME_CONFIG.PLAYERS.X;
-                    let score = this.minimax(board, depth + 1, true);
-                    board[i] = '';
-                    bestScore = Math.min(score, bestScore);
-                }
-            }
-            return bestScore;
-        }
-    }
-
-    checkWinnerForMinimax(board) {
-        for (const condition of this.winningConditions) {
-            const [a, b, c] = condition;
-            if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-                return board[a];
-            }
-        }
-        if (!board.includes('')) return 'draw';
-        return null;
-    }
-
-    resetGame() { this.init(); }
-
-    resetScores() {
-        this.state.scores = {
-            ai: { X: 0, AI: 0 },
-            pvp: { X: 0, Y: 0 }
-        };
-        this.updateScore();
-        this.savePreferences();
-    }
-
-    getScoreKey(player) {
-        if (player === GAME_CONFIG.PLAYERS.X) return 'X';
-        return this.state.gameMode === 'ai' ? 'AI' : 'Y';
-    }
-
-    getPlayerLabel(player) {
-        if (player === GAME_CONFIG.PLAYERS.X) return 'X';
-        return this.state.gameMode === 'ai' ? 'AI' : 'Y';
-    }
-
-    getWinnerPhrase(player) {
-        if (player !== GAME_CONFIG.PLAYERS.X && this.state.gameMode === 'ai') return 'AI Player';
-        return `Player ${this.getPlayerLabel(player)}`;
-    }
-
-    showHint() {
-        if (!this.state.gameActive || this.state.isAiThinking) return;
-        const hintIndex = this.findBestMove(this.state.currentPlayer);
-        if (hintIndex !== null) {
-            const targetCell = this.elements.cells[hintIndex];
-            targetCell.style.boxShadow = '0 0 15px #fbbf24';
-            targetCell.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                targetCell.style.boxShadow = '';
-                targetCell.style.transform = '';
-            }, 1000);
-        }
-    }
-
-    updateScore() {
-        const bucket = this.state.scores[this.state.gameMode];
-        this.elements.xScoreElement.textContent = bucket.X;
-        this.elements.oScoreElement.textContent = bucket[this.getScoreKey(GAME_CONFIG.PLAYERS.O)];
-    }
-
-    updateModeLabels() {
-        const ai = this.state.gameMode === 'ai';
-        this.elements.xLabel.textContent = ai ? 'You' : 'Player X';
-        this.elements.oLabel.textContent = ai ? 'AI' : 'Player Y';
-    }
-
-    updateActivePlayerUI() {
-        this.elements.xScoreBox.classList.toggle('active', this.state.currentPlayer === GAME_CONFIG.PLAYERS.X);
-        this.elements.oScoreBox.classList.toggle('active', this.state.currentPlayer === GAME_CONFIG.PLAYERS.O);
-    }
-
-    launchConfetti() {
-        const colors = ['#60a5fa', '#f87171', '#fbbf24', '#4ade80'];
-        const container = this.elements.confetti;
-        container.innerHTML = '';
-        for (let i = 0; i < 30; i++) {
-            const piece = document.createElement('span');
-            piece.className = 'piece';
-            piece.style.left = `${Math.random() * 100}%`;
-            piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-            piece.style.animationDelay = `${Math.random() * 0.3}s`;
-            container.appendChild(piece);
-        }
-    }
-
-    showModal(title, message, celebrate = false) {
-        this.elements.modalTitle.textContent = title;
-        this.elements.modalMessage.textContent = message;
-        if (celebrate) this.launchConfetti();
-        else this.elements.confetti.innerHTML = '';
-        this.elements.winModal.classList.add('active');
-    }
-
-    closeModal() { this.elements.winModal.classList.remove('active'); }
-
-    switchTheme(theme) {
-        document.body.className = `theme-${theme}`;
-        this.elements.lightThemeBtn.classList.remove('active');
-        this.elements.darkThemeBtn.classList.remove('active');
-        if (theme === 'light') this.elements.lightThemeBtn.classList.add('active');
-        else this.elements.darkThemeBtn.classList.add('active');
-        this.savePreferences();
-    }
-
-    switchMode(mode) {
-        if (mode === this.state.gameMode) return;
-        this.state.gameMode = mode;
-        this.elements.aiModeBtn.classList.toggle('active', mode === 'ai');
-        this.elements.pvpModeBtn.classList.toggle('active', mode === 'pvp');
-        this.updateModeLabels();
-        this.savePreferences();
-        this.resetGame();
-    }
+  closeModal() {
+    this.elements.winModal.classList.remove('active');
+  }
 }
 
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      /* Service worker support is optional for gameplay. */
+    });
+  });
 }
 
-new TicTacToe();
+new TicTacToeController();
