@@ -269,7 +269,7 @@ function loadScores(value) {
       },
       pvp: {
         X: parsed.pvp?.X || 0,
-        O: parsed.pvp?.O ?? parsed.pvp?.Y ?? 0
+        O: parsed.pvp?.O || 0
       }
     };
   } catch {
